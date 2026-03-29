@@ -6,6 +6,7 @@ import Array "mo:core/Array";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
+import Principal "mo:core/Principal";
 
 actor {
   type Question = {
@@ -27,7 +28,8 @@ actor {
     };
   };
 
-  var nextId = 6;
+  stable var nextId = 6;
+  stable var adminPrincipal : ?Principal = null;
 
   let questions = Map.empty<Nat, Question>();
 
@@ -38,7 +40,28 @@ actor {
     };
   };
 
-  public shared ({ caller }) func createQuestion(
+  public shared ({ caller }) func claimAdmin() : async Bool {
+    switch (adminPrincipal) {
+      case (null) {
+        adminPrincipal := ?caller;
+        true;
+      };
+      case (?_) { false };
+    };
+  };
+
+  public query ({ caller }) func isAdmin() : async Bool {
+    switch (adminPrincipal) {
+      case (null) { false };
+      case (?admin) { caller == admin };
+    };
+  };
+
+  public query func getAdminPrincipal() : async ?Principal {
+    adminPrincipal;
+  };
+
+  public shared func createQuestion(
     questionText : Text,
     answerOptions : [Text],
     correctAnswerIndex : Nat,
@@ -46,7 +69,6 @@ actor {
     category : Text,
   ) : async Nat {
     if (answerOptions.size() != 4) { Runtime.trap("There must be exactly 4 answer options.") };
-
     let question = {
       questionId = nextId;
       questionText;
@@ -55,35 +77,34 @@ actor {
       explanation;
       category;
     };
-
     questions.add(nextId, question);
     nextId += 1;
     nextId - 1;
   };
 
-  public query ({ caller }) func getQuestion(id : Nat) : async Question {
+  public query func getQuestion(id : Nat) : async Question {
     getQuestionInternal(id);
   };
 
-  public query ({ caller }) func getAllQuestions() : async [Question] {
+  public query func getAllQuestions() : async [Question] {
     questions.values().toArray().sort();
   };
 
-  public query ({ caller }) func getQuestionsByCategory(category : Text) : async [Question] {
+  public query func getQuestionsByCategory(category : Text) : async [Question] {
     questions.values().filter(func(q) { q.category == category }).toArray();
   };
 
-  public shared ({ caller }) func updateQuestion(id : Nat, updatedQuestion : Question) : async () {
+  public shared func updateQuestion(id : Nat, updatedQuestion : Question) : async () {
     ignore getQuestionInternal(id);
     questions.add(id, updatedQuestion);
   };
 
-  public shared ({ caller }) func deleteQuestion(id : Nat) : async () {
+  public shared func deleteQuestion(id : Nat) : async () {
     ignore getQuestionInternal(id);
     questions.remove(id);
   };
 
-  public shared ({ caller }) func initializeDefaultQuestions() : async () {
+  public shared func initializeDefaultQuestions() : async () {
     if (questions.isEmpty()) {
       let defaultQuestions : [Question] = [
         {

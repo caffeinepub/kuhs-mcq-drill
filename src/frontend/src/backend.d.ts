@@ -16,6 +16,9 @@ export interface Question {
     category: string;
 }
 export interface backendInterface {
+    claimAdmin(): Promise<boolean>;
+    isAdmin(): Promise<boolean>;
+    getAdminPrincipal(): Promise<[] | [Principal]>;
     createQuestion(questionText: string, answerOptions: Array<string>, correctAnswerIndex: bigint, explanation: string, category: string): Promise<bigint>;
     deleteQuestion(id: bigint): Promise<void>;
     getAllQuestions(): Promise<Array<Question>>;

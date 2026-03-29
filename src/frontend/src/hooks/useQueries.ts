@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Question } from "../backend.d";
+import type {
+  backendInterface as FullBackendInterface,
+  Question,
+} from "../backend.d";
 import { useActor } from "./useActor";
 
 export function useGetAllQuestions() {
@@ -11,6 +14,32 @@ export function useGetAllQuestions() {
       return actor.getAllQuestions();
     },
     enabled: !!actor && !isFetching,
+  });
+}
+
+export function useIsAdmin() {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return (actor as unknown as FullBackendInterface).isAdmin();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useClaimAdmin() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("No actor");
+      return (actor as unknown as FullBackendInterface).claimAdmin();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["isAdmin"] });
+    },
   });
 }
 

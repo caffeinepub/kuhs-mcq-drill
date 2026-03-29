@@ -2,12 +2,23 @@ import { Toaster } from "@/components/ui/sonner";
 import { useState } from "react";
 import { AdminPanel } from "./components/AdminPanel";
 import { AppHeader } from "./components/AppHeader";
+import { LandingPage } from "./components/LandingPage";
 import { QuizMode } from "./components/QuizMode";
 
 type Tab = "practice" | "admin";
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("practice");
+
+  if (showLanding) {
+    return (
+      <>
+        <Toaster richColors position="top-right" />
+        <LandingPage onEnter={() => setShowLanding(false)} />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

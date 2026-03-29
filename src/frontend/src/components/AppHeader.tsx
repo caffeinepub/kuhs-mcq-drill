@@ -1,4 +1,6 @@
-import { BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, LogIn, LogOut } from "lucide-react";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 interface AppHeaderProps {
   activeTab: "practice" | "admin";
@@ -6,6 +8,12 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
+  const { identity, login, clear, isLoggingIn } = useInternetIdentity();
+  const isLoggedIn = !!identity;
+  const shortPrincipal = identity
+    ? identity.getPrincipal().toString().slice(0, 5)
+    : null;
+
   return (
     <header className="sticky top-0 z-50 bg-card border-b border-border shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center h-16 gap-6">
@@ -38,24 +46,57 @@ export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
           >
             Practice
           </button>
-          <button
-            type="button"
-            data-ocid="nav.admin.tab"
-            onClick={() => onTabChange("admin")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === "admin"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
-            }`}
-          >
-            Admin Panel
-          </button>
+          {isLoggedIn && (
+            <button
+              type="button"
+              data-ocid="nav.admin.tab"
+              onClick={() => onTabChange("admin")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "admin"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+            >
+              Admin Panel
+            </button>
+          )}
         </nav>
 
+        {/* Right side: auth */}
         <div className="ml-auto flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-            K
-          </div>
+          {isLoggedIn ? (
+            <>
+              <div className="hidden sm:flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-full">
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
+                  {shortPrincipal?.[0]?.toUpperCase() ?? "?"}
+                </div>
+                <span className="text-xs font-mono text-foreground">
+                  {shortPrincipal}…
+                </span>
+              </div>
+              <Button
+                data-ocid="header.logout.button"
+                variant="ghost"
+                size="sm"
+                onClick={clear}
+                className="text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </>
+          ) : (
+            <Button
+              data-ocid="header.login.button"
+              size="sm"
+              onClick={login}
+              disabled={isLoggingIn}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
+            >
+              <LogIn className="w-4 h-4" />
+              {isLoggingIn ? "Connecting…" : "Login"}
+            </Button>
+          )}
         </div>
       </div>
     </header>
