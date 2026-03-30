@@ -45,7 +45,11 @@ export function QuizMode() {
     }
   }, [isLoading, questions, initMutate]);
 
-  const allQuestions: Question[] = questions ?? [];
+  // Reverse so newest questions appear first
+  const allQuestions: Question[] = useMemo(
+    () => (questions ?? []).slice().reverse(),
+    [questions],
+  );
 
   // Derive unique categories
   const categories = useMemo(() => {

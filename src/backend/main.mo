@@ -1,8 +1,6 @@
 import Map "mo:core/Map";
 import Text "mo:core/Text";
-import Int "mo:core/Int";
 import Iter "mo:core/Iter";
-import Array "mo:core/Array";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
@@ -18,20 +16,28 @@ actor {
     category : Text;
   };
 
-  module Question {
-    public func compareByCategory(q1 : Question, q2 : Question) : Order.Order {
-      Text.compare(q1.category, q2.category);
-    };
-
-    public func compare(q1 : Question, q2 : Question) : Order.Order {
-      Nat.compare(q1.questionId, q2.questionId);
-    };
-  };
-
-  stable var nextId = 6;
-  stable var adminPrincipal : ?Principal = null;
+  var nextId = 6;
+  var adminPrincipal : ?Principal = null;
+  stable var stableQuestionsEntries : [(Nat, Question)] = [];
+  stable var stableNextId : Nat = 6;
+  stable var stableAdminPrincipal : ?Principal = null;
 
   let questions = Map.empty<Nat, Question>();
+
+  system func preupgrade() {
+    stableQuestionsEntries := questions.entries().toArray();
+    stableNextId := nextId;
+    stableAdminPrincipal := adminPrincipal;
+  };
+
+  system func postupgrade() {
+    for ((k, v) in stableQuestionsEntries.values()) {
+      questions.add(k, v);
+    };
+    stableQuestionsEntries := [];
+    nextId := stableNextId;
+    adminPrincipal := stableAdminPrincipal;
+  };
 
   func getQuestionInternal(id : Nat) : Question {
     switch (questions.get(id)) {
@@ -87,11 +93,15 @@ actor {
   };
 
   public query func getAllQuestions() : async [Question] {
-    questions.values().toArray().sort();
+    questions.values().toArray().sort(func(a : Question, b : Question) : Order.Order {
+      Nat.compare(b.questionId, a.questionId);
+    });
   };
 
   public query func getQuestionsByCategory(category : Text) : async [Question] {
-    questions.values().filter(func(q) { q.category == category }).toArray();
+    questions.values().filter(func(q) { q.category == category }).toArray().sort(func(a : Question, b : Question) : Order.Order {
+      Nat.compare(b.questionId, a.questionId);
+    });
   };
 
   public shared func updateQuestion(id : Nat, updatedQuestion : Question) : async () {

@@ -165,24 +165,34 @@ export function AdminPanel() {
     explanation: string;
     category: string;
   }) {
-    if (editingQuestion) {
-      await updateMutation.mutateAsync({
-        ...editingQuestion,
-        ...data,
-      });
-      toast.success("Question updated");
-    } else {
-      await createMutation.mutateAsync(data);
-      toast.success("Question added");
+    try {
+      if (editingQuestion) {
+        await updateMutation.mutateAsync({
+          ...editingQuestion,
+          ...data,
+        });
+        toast.success("Question updated");
+      } else {
+        await createMutation.mutateAsync(data);
+        toast.success("Question added successfully");
+      }
+      setModalOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Failed to save question: ${message}`);
     }
-    setModalOpen(false);
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.questionId);
-    toast.success("Question deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.questionId);
+      toast.success("Question deleted");
+      setDeleteTarget(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Failed to delete question: ${message}`);
+    }
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
