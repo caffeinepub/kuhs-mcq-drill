@@ -1,6 +1,4 @@
 import Map "mo:core/Map";
-import Text "mo:core/Text";
-import Iter "mo:core/Iter";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
@@ -16,13 +14,15 @@ actor {
     category : Text;
   };
 
-  var nextId = 6;
-  var adminPrincipal : ?Principal = null;
+  // Stable storage — persists across upgrades
   stable var stableQuestionsEntries : [(Nat, Question)] = [];
-  stable var stableNextId : Nat = 6;
+  stable var stableNextId : Nat = 100;
   stable var stableAdminPrincipal : ?Principal = null;
 
+  // Runtime state (rebuilt from stable vars in postupgrade)
   let questions = Map.empty<Nat, Question>();
+  var nextId = 100;
+  var adminPrincipal : ?Principal = null;
 
   system func preupgrade() {
     stableQuestionsEntries := questions.entries().toArray();
@@ -31,8 +31,9 @@ actor {
   };
 
   system func postupgrade() {
-    for ((k, v) in stableQuestionsEntries.values()) {
-      questions.add(k, v);
+    for ((k, v) in stableQuestionsEntries.vals()) {
+      questions.remove(k);
+    questions.add(k, v);
     };
     stableQuestionsEntries := [];
     nextId := stableNextId;
@@ -75,17 +76,20 @@ actor {
     category : Text,
   ) : async Nat {
     if (answerOptions.size() != 4) { Runtime.trap("There must be exactly 4 answer options.") };
+    let id = nextId;
     let question = {
-      questionId = nextId;
+      questionId = id;
       questionText;
       answerOptions;
       correctAnswerIndex;
       explanation;
       category;
     };
-    questions.add(nextId, question);
+    questions.remove(id);
+    questions.add(id, question);
     nextId += 1;
-    nextId - 1;
+    stableNextId := nextId;
+    id;
   };
 
   public query func getQuestion(id : Nat) : async Question {
@@ -99,13 +103,14 @@ actor {
   };
 
   public query func getQuestionsByCategory(category : Text) : async [Question] {
-    questions.values().filter(func(q) { q.category == category }).toArray().sort(func(a : Question, b : Question) : Order.Order {
+    questions.values().filter(func(q : Question) : Bool { q.category == category }).toArray().sort(func(a : Question, b : Question) : Order.Order {
       Nat.compare(b.questionId, a.questionId);
     });
   };
 
   public shared func updateQuestion(id : Nat, updatedQuestion : Question) : async () {
     ignore getQuestionInternal(id);
+    questions.remove(id);
     questions.add(id, updatedQuestion);
   };
 
@@ -158,10 +163,14 @@ actor {
           category = "Physiology";
         },
       ];
-      for (q in defaultQuestions.values()) {
-        questions.add(q.questionId, q);
+      for (q in defaultQuestions.vals()) {
+        questions.remove(q.questionId);
+    questions.add(q.questionId, q);
       };
-      nextId := 6;
+      if (nextId < 100) {
+        nextId := 100;
+        stableNextId := 100;
+      };
     };
   };
 };
